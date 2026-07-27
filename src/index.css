@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* =========================
+   Design Tokens (Light)
+========================= */
+
+:root {
+  /* Brand */
+  --color-primary: #990000;
+  --color-primary-hover: #7d0000;
+  --color-secondary: #ffd54f;
+
+  /* Background */
+  --color-background: #ffffff;
+  --color-surface: #f9fafb;
+
+  /* Text */
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+
+  /* Border */
+  --color-border: #e5e7eb;
+
+  /* Status */
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+
+  /* Font */
+  --font-family: Inter, system-ui, sans-serif;
+}
+
+/* =========================
+   Dark Theme
+========================= */
+
+.dark {
+  --color-background: #111827;
+  --color-surface: #1f2937;
+
+  --color-text: #f9fafb;
+  --color-text-secondary: #d1d5db;
+
+  --color-border: #374151;
+}
+
+/* =========================
+   Global Styles
+========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+button {
+  cursor: pointer;
+}
