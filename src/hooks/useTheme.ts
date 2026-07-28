@@ -18,6 +18,7 @@ export function useTheme() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
+  //theme toggle
   function toggleTheme() {
     setTheme((current) =>
       current === "light" ? "dark" : "light"
