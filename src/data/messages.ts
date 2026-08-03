@@ -22,5 +22,24 @@ export const messages: Message[] = [
     body: "We're currently investigating the VPN gateway. We'll update you shortly.",
     createdAt: "2026-07-26T10:00:00Z",
   },
-  
 ];
+
+export interface CreateMessageInput {
+  requestId: string;
+  authorId: string;
+  body: string;
+}
+
+export function createMessage(input: CreateMessageInput): Message {
+  const message: Message = {
+    id: crypto.randomUUID(),
+    requestId: input.requestId,
+    authorId: input.authorId,
+    body: input.body,
+    createdAt: new Date().toISOString(),
+  };
+
+  messages.push(message);
+
+  return message;
+}
