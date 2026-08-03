@@ -1,5 +1,4 @@
-import type { Request } from "../shared/types";
-
+import type { Request, RequestCategory, RequestPriority } from "../shared/types";
 
 export const requests: Request[] = [
   {
@@ -36,3 +35,43 @@ export const requests: Request[] = [
     updatedAt: "2026-07-25T15:30:00Z",
   },
 ];
+
+export interface CreateRequestInput {
+  title: string;
+  category: RequestCategory;
+  priority: RequestPriority;
+  requesterId: string;
+}
+
+export function createRequest(input: CreateRequestInput): Request {
+  const now = new Date().toISOString();
+
+  const request: Request = {
+    id: crypto.randomUUID(),
+    title: input.title,
+    status: "open",
+    priority: input.priority,
+    category: input.category,
+    requesterId: input.requesterId,
+    assigneeId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  requests.push(request);
+
+  return request;
+}
+
+export function cancelRequest(id: string): Request | undefined {
+  const request = requests.find((existing) => existing.id === id);
+
+  if (!request || request.status !== "open") {
+    return request;
+  }
+
+  request.status = "cancelled";
+  request.updatedAt = new Date().toISOString();
+
+  return request;
+}

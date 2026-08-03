@@ -36,7 +36,12 @@ function MyRequestsPage() {
           onCategoryChange={setCategory}
         />
 
-        <RequestList requests={filteredRequests} />
+        <RequestList
+          requests={filteredRequests}
+          totalCount={requests.length}
+          emptyTitle="You have no requests yet"
+          emptyDescription="Create a new request to get started."
+        />
 
       </section>
 
