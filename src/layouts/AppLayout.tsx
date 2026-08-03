@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import { Button } from "../components/ui/Button";
 import { cn } from "../shared/utils/cn";
 
@@ -16,6 +17,7 @@ const navLinks = [
 
 function AppLayout({ children }: AppLayoutProps) {
   const { theme, toggleTheme } = useTheme();
+  const { reduceMotion, toggleReducedMotion } = useReducedMotion();
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text)]">
@@ -44,6 +46,10 @@ function AppLayout({ children }: AppLayoutProps) {
         <div className="flex items-center gap-3">
           <Button variant="secondary" onClick={toggleTheme}>
             {theme === "dark" ? "Light mode" : "Dark mode"}
+          </Button>
+
+          <Button variant="secondary" onClick={toggleReducedMotion}>
+            {reduceMotion ? "Motion: Reduced" : "Motion: Full"}
           </Button>
 
           <Button variant="ghost">Logout</Button>

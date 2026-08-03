@@ -36,7 +36,12 @@ function QueuePage() {
           onCategoryChange={setCategory}
         />
 
-        <RequestList requests={filteredRequests} />
+        <RequestList
+          requests={filteredRequests}
+          totalCount={requests.length}
+          emptyTitle="The queue is empty"
+          emptyDescription="There are no requests to work on right now."
+        />
 
       </section>
 

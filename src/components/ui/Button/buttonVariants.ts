@@ -8,6 +8,9 @@ export const buttonVariants = cva(
         primary:
           "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
 
+        info:
+          "bg-[var(--color-info)] text-white hover:bg-[var(--color-info-hover)]",
+
         secondary:
           "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-border)]",
 
