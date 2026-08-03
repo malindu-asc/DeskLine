@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import AppLayout from "../layouts/AppLayout";
 import { Button } from "../components/ui/Button";
-import { createRequest, createMessage } from "../data";
+import { requestService } from "../services/requestService";
 import type { RequestCategory, RequestPriority } from "../shared/types";
 
 // No auth yet 
@@ -68,7 +68,7 @@ function NewRequestPage() {
     setTouched((current) => ({ ...current, [field]: true }));
   }
 
-  function handleSubmit(event: FormEvent) {
+   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setTouched({ title: true, description: true, category: true, priority: true });
 
@@ -76,20 +76,27 @@ function NewRequestPage() {
       return;
     }
 
-    const request = createRequest({
-      title: form.title.trim(),
-      category: form.category as RequestCategory,
-      priority: form.priority as RequestPriority,
-      requesterId: CURRENT_USER_ID,
-    });
+    const timestamp = new Date().toISOString();
 
-    createMessage({
-      requestId: request.id,
-      authorId: CURRENT_USER_ID,
-      body: form.description.trim(),
-    });
+    const newRequest = {
+    id: crypto.randomUUID(),
+    title: form.title.trim(),
+    status: "open" as const,
+    category: form.category as RequestCategory,
+    priority: form.priority as RequestPriority,
+    requesterId: CURRENT_USER_ID,
+    assigneeId: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+   };
 
-    navigate(`/requests/${request.id}`);
+
+    try {
+     await requestService.create(newRequest);
+     navigate("/my-requests");
+    } catch (error) {
+      console.error("Failed to create request:", error);
+    }
   }
 
   return (

@@ -21,4 +21,16 @@ export const handlers = [
 
     return HttpResponse.json(request);
   }),
+
+  // Create a new request
+http.post("/api/requests", async ({ request }) => {
+  const newRequest = await request.json();
+
+  db.requests.unshift(newRequest as (typeof db.requests)[number]);
+
+  return HttpResponse.json(newRequest, {
+    status: 201,
+  });
+}),
+
 ];

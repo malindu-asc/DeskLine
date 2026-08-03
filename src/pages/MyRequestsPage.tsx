@@ -3,9 +3,16 @@ import { useRequestFilters } from "../features/requests/hooks/useRequestFilters"
 import RequestFilters from "../features/requests/components/RequestFilters";
 import RequestList from "../features/requests/components/RequestList";
 
-import { requests } from "../data";
+import { useEffect, useState } from "react";
+import type { Request } from "../shared/types";
+import { requestService } from "../services/requestService";
 
 function MyRequestsPage() {
+
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const {
     search,
     status,
@@ -17,6 +24,26 @@ function MyRequestsPage() {
     setCategory,
     filteredRequests,
   } = useRequestFilters(requests);
+
+  // Load requests from the API
+  const loadRequests = async () => {
+  try {
+    setLoading(true);
+
+    const data = await requestService.getAll();
+
+    setRequests(data);
+    setError(null);
+  } catch {
+    setError("Failed to load requests.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  loadRequests();
+}, []);
 
   return (
     <AppLayout>
