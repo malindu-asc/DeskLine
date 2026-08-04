@@ -18,6 +18,25 @@ export const requestService = {
       },
       body: JSON.stringify(request),
     });
-  }
+  },
+  
+  async update(
+  id: string,
+  updates: Partial<Request>
+  ) {
+  return api<Request>(`/requests/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+},
+
+ async delete(id: string) {
+  return api<void>(`/requests/${id}`, {
+    method: "DELETE",
+  });
+},
 
 };

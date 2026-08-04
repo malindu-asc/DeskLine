@@ -1,32 +1,86 @@
-import { useState, type FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
 import AppLayout from "../layouts/AppLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
-import { requests, cancelRequest, messages as allMessages, createMessage, users } from "../data";
-import type { Message } from "../shared/types";
+import { useEffect, useState, type FormEvent } from "react";
+import { requestService } from "../services/requestService";
+import { messageService } from "../services/messageService";
+import { userService } from "../services/userService";
 
-function getUserName(id: string | null) {
-  if (!id) {
-    return "Unassigned";
-  }
-
-  return users.find((user) => user.id === id)?.name ?? "Unknown";
-}
+import type { Message, Request, User } from "../shared/types";
 
 function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [request, setRequest] = useState(() => requests.find((r) => r.id === id));
-  const [threadMessages, setThreadMessages] = useState<Message[]>(() =>
-    allMessages.filter((message) => message.requestId === id)
-  );
+  const [request, setRequest] = useState<Request | null>(null);
+  const [threadMessages, setThreadMessages] = useState<Message[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+
+  function getUserName(userId: string | null) {
+    if (!userId) {
+      return "Unassigned";
+    }
+
+    return users.find((user) => user.id === userId)?.name ?? "Unknown";
+  }
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isCancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+
+  // Load request, messages, and users when the component mounts or the ID changes
+  useEffect(() => {
+  async function loadData() {
+    if (!id) return;
+
+    try {
+      setLoading(true);
+
+      const [request, messages, users] = await Promise.all([
+        requestService.getById(id),
+        messageService.getByRequestId(id),
+        userService.getAll(),
+      ]);
+
+      setRequest(request);
+      setThreadMessages(messages);
+      setUsers(users);
+      setError(null);
+    } catch {
+      setError("Failed to load request.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  loadData();
+}, [id]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <p className="p-6">Loading request...</p>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="space-y-4 p-6">
+          <p>{error}</p>
+
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!request) {
     return (
@@ -45,27 +99,37 @@ function RequestDetailPage() {
   const canComment = request.status === "open" || request.status === "pending";
   const canCancel = request.status === "open";
 
-  function handleCancelConfirm() {
+  async function handleCancelConfirm() {
     if (!request) {
       return;
     }
 
-    const updated = cancelRequest(request.id);
+    try {
+      const updated = await requestService.update(request.id, {
+        status: "cancelled",
+      });
 
-    if (updated) {
-      setRequest({ ...updated });
-      const systemMessage = createMessage({
+      setRequest(updated);
+
+      const systemMessage = {
+        id: crypto.randomUUID(),
         requestId: request.id,
         authorId: request.requesterId,
         body: "Cancelled by requester",
-      });
-      setThreadMessages((prev) => [...prev, systemMessage]);
-    }
+        createdAt: new Date().toISOString(),
+      };
 
-    setCancelConfirmOpen(false);
+      await messageService.create(systemMessage);
+
+      setThreadMessages((prev) => [...prev, systemMessage]);
+    } catch (error) {
+      console.error("Failed to cancel request:", error);
+    } finally {
+      setCancelConfirmOpen(false);
+    }
   }
 
-  function handleCommentSubmit(event: FormEvent) {
+  async function handleCommentSubmit(event: FormEvent) {
     event.preventDefault();
 
     if (!request || !commentBody.trim() || isSending) {
@@ -74,18 +138,24 @@ function RequestDetailPage() {
 
     setIsSending(true);
 
-    // Simulated latency so the disable-while-sending state is visible before Day 5 wires a real API.
-    setTimeout(() => {
-      const message = createMessage({
-        requestId: request.id,
-        authorId: request.requesterId,
-        body: commentBody.trim(),
-      });
+    const message = {
+      id: crypto.randomUUID(),
+      requestId: request.id,
+      authorId: request.requesterId,
+      body: commentBody.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await messageService.create(message);
 
       setThreadMessages((prev) => [...prev, message]);
       setCommentBody("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    } finally {
       setIsSending(false);
-    }, 400);
+    }
   }
 
   return (

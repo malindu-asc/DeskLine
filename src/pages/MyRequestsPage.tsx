@@ -2,6 +2,7 @@ import AppLayout from "../layouts/AppLayout";
 import { useRequestFilters } from "../features/requests/hooks/useRequestFilters";
 import RequestFilters from "../features/requests/components/RequestFilters";
 import RequestList from "../features/requests/components/RequestList";
+import { Button } from "../components/ui/Button";
 
 import { useEffect, useState } from "react";
 import type { Request } from "../shared/types";
@@ -44,6 +45,26 @@ function MyRequestsPage() {
 useEffect(() => {
   loadRequests();
 }, []);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <p className="p-6">Loading requests...</p>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="space-y-4 p-6">
+          <p>{error}</p>
+
+          <Button onClick={loadRequests}>Retry</Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
