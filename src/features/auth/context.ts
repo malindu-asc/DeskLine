@@ -3,7 +3,7 @@ import type { User } from "../../shared/types";
 
 export interface AuthContextValue {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
 }
 
