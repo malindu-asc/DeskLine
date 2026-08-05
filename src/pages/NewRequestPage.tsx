@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
 import { Button } from "../components/ui/Button";
 import { requestService } from "../services/requestService";
+import { messageService } from "../services/messageService";
 import type { RequestCategory, RequestPriority } from "../shared/types";
 
 // No auth yet 
@@ -57,6 +58,8 @@ function NewRequestPage() {
     priority: false,
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const errors = validate(form);
   const isValid = Object.keys(errors).length === 0;
 
@@ -72,9 +75,11 @@ function NewRequestPage() {
     event.preventDefault();
     setTouched({ title: true, description: true, category: true, priority: true });
 
-    if (!isValid) {
+    if (!isValid || isSubmitting) {
       return;
     }
+
+    setIsSubmitting(true);
 
     const timestamp = new Date().toISOString();
 
@@ -90,12 +95,21 @@ function NewRequestPage() {
     updatedAt: timestamp,
    };
 
-
     try {
-     await requestService.create(newRequest);
+     const created = await requestService.create(newRequest);
+
+     await messageService.create({
+       id: crypto.randomUUID(),
+       requestId: created.id,
+       authorId: CURRENT_USER_ID,
+       body: form.description.trim(),
+       createdAt: timestamp,
+     });
+
      navigate("/my-requests");
     } catch (error) {
       console.error("Failed to create request:", error);
+      setIsSubmitting(false);
     }
   }
 
@@ -188,8 +202,8 @@ function NewRequestPage() {
             </div>
           </div>
 
-          <Button type="submit" disabled={!isValid}>
-            Create request
+          <Button type="submit" variant="info" disabled={!isValid || isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create request"}
           </Button>
         </form>
       </section>
