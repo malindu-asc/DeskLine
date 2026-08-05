@@ -7,12 +7,14 @@ import { useEffect, useState, type FormEvent } from "react";
 import { requestService } from "../services/requestService";
 import { messageService } from "../services/messageService";
 import { userService } from "../services/userService";
+import { useAuth } from "../features/auth/useAuth";
 
 import type { Message, Request, User } from "../shared/types";
 
 function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [request, setRequest] = useState<Request | null>(null);
   const [threadMessages, setThreadMessages] = useState<Message[]>([]);
@@ -97,11 +99,35 @@ function RequestDetailPage() {
     );
   }
 
+  if (!user) {
+    // ProtectedRoute guarantees a logged-in user reaches this page; this
+    // just satisfies the type checker and keeps the component safe in
+    // isolation, without asserting past the AuthContextValue type.
+    return null;
+  }
+
+  const isOwner = user.id === request.requesterId;
+  const isStaff = user.role === "technician" || user.role === "admin";
+
+  if (!isOwner && !isStaff) {
+    return (
+      <AppLayout>
+        <section className="space-y-4 text-center">
+          <h2 className="text-2xl font-bold">Not authorized</h2>
+          <p className="text-[var(--color-text-secondary)]">
+            You don't have permission to view this request.
+          </p>
+          <Button onClick={() => navigate("/my-requests")}>Back to My Requests</Button>
+        </section>
+      </AppLayout>
+    );
+  }
+
   const canComment = request.status === "open" || request.status === "pending";
   const canCancel = request.status === "open";
 
   async function handleCancelConfirm() {
-    if (!request) {
+    if (!request || !user) {
       return;
     }
 
@@ -115,7 +141,7 @@ function RequestDetailPage() {
       const systemMessage = {
         id: crypto.randomUUID(),
         requestId: request.id,
-        authorId: request.requesterId,
+        authorId: user.id,
         body: "Cancelled by requester",
         createdAt: new Date().toISOString(),
       };
@@ -133,7 +159,7 @@ function RequestDetailPage() {
   async function handleCommentSubmit(event: FormEvent) {
     event.preventDefault();
 
-    if (!request || !commentBody.trim() || isSending) {
+    if (!request || !user || !commentBody.trim() || isSending) {
       return;
     }
 
@@ -142,7 +168,7 @@ function RequestDetailPage() {
     const message = {
       id: crypto.randomUUID(),
       requestId: request.id,
-      authorId: request.requesterId,
+      authorId: user.id,
       body: commentBody.trim(),
       createdAt: new Date().toISOString(),
     };
