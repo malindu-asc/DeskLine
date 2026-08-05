@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useAuth } from "../features/auth/useAuth";
 import { Button } from "../components/ui/Button";
 import { cn } from "../shared/utils/cn";
 
@@ -18,6 +19,13 @@ const navLinks = [
 function AppLayout({ children }: AppLayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const { reduceMotion, toggleReducedMotion } = useReducedMotion();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text)]">
@@ -52,7 +60,7 @@ function AppLayout({ children }: AppLayoutProps) {
             {reduceMotion ? "Motion: Reduced" : "Motion: Full"}
           </Button>
 
-          <Button variant="ghost">Logout</Button>
+          <Button variant="ghost" onClick={handleLogout}>Logout</Button>
         </div>
       </header>
 

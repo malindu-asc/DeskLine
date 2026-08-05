@@ -28,6 +28,7 @@ function RequestDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [commentBody, setCommentBody] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isCancelConfirmOpen, setCancelConfirmOpen] = useState(false);
@@ -58,7 +59,7 @@ function RequestDetailPage() {
   }
 
   loadData();
-}, [id]);
+}, [id, retryCount]);
 
   if (loading) {
     return (
@@ -74,7 +75,7 @@ function RequestDetailPage() {
         <div className="space-y-4 p-6">
           <p>{error}</p>
 
-          <Button onClick={() => window.location.reload()}>
+          <Button onClick={() => setRetryCount((count) => count + 1)}>
             Retry
           </Button>
         </div>

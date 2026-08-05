@@ -13,6 +13,7 @@ function MyRequestsPage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const {
     search,
@@ -26,25 +27,24 @@ function MyRequestsPage() {
     filteredRequests,
   } = useRequestFilters(requests);
 
-  // Load requests from the API
-  const loadRequests = async () => {
-  try {
-    setLoading(true);
+  useEffect(() => {
+    async function loadRequests() {
+      try {
+        setLoading(true);
 
-    const data = await requestService.getAll();
+        const data = await requestService.getAll();
 
-    setRequests(data);
-    setError(null);
-  } catch {
-    setError("Failed to load requests.");
-  } finally {
-    setLoading(false);
-  }
-};
+        setRequests(data);
+        setError(null);
+      } catch {
+        setError("Failed to load requests.");
+      } finally {
+        setLoading(false);
+      }
+    }
 
-useEffect(() => {
-  loadRequests();
-}, []);
+    loadRequests();
+  }, [retryCount]);
 
   if (loading) {
     return (
@@ -60,7 +60,7 @@ useEffect(() => {
         <div className="space-y-4 p-6">
           <p>{error}</p>
 
-          <Button onClick={loadRequests}>Retry</Button>
+          <Button onClick={() => setRetryCount((count) => count + 1)}>Retry</Button>
         </div>
       </AppLayout>
     );
