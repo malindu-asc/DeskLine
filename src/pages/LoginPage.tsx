@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../features/auth/useAuth";
+import { getHomeRoute } from "../features/auth/utils/getHomeRoute";
 import { ApiError } from "../services/errors";
 
 interface FormState {
@@ -65,7 +66,7 @@ function LoginPage() {
 
     try {
       const loggedInUser = await login(form.email.trim(), form.password);
-      navigate(loggedInUser.role === "requester" ? "/my-requests" : "/queue");
+      navigate(getHomeRoute(loggedInUser.role));
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setAuthError("Invalid email or password.");
