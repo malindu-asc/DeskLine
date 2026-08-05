@@ -1,7 +1,29 @@
 import { http, HttpResponse } from "msw";
 import { db } from "./db";
+import { DEMO_PASSWORD } from "./credentials";
 
 export const handlers = [
+  // Log in
+  http.post("/api/login", async ({ request }) => {
+    const { email, password } = (await request.json()) as {
+      email: string;
+      password: string;
+    };
+
+    const user = db.users.find((candidate) => candidate.email === email);
+
+    if (!user || password !== DEMO_PASSWORD) {
+      return new HttpResponse(null, {
+        status: 401,
+      });
+    }
+
+    return HttpResponse.json({
+      user,
+      token: `demo-token-${user.id}`,
+    });
+  }),
+
   // Get all requests
   http.get("/api/requests", () => {
     return HttpResponse.json(db.requests);
@@ -48,7 +70,7 @@ http.patch("/api/requests/:id", async ({ params, request }) => {
   }
 
   Object.assign(existingRequest, updates, {
-    updatedAt: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   });
 
   return HttpResponse.json(existingRequest);
