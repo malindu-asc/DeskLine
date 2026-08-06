@@ -2,6 +2,25 @@ import { http, HttpResponse } from "msw";
 import { db } from "./db";
 import { DEMO_PASSWORD } from "./credentials";
 
+// Derives "who is calling" from the Authorization header the client attaches
+// (see services/api.ts). The role comes from db.users (the mock's own
+// "database"), never from anything the client claims directly - a client
+// could send any header it wants, so trusting a client-declared role would
+// be exactly as fake as hiding a button. This is the enforcement point the
+// spec means by "the API must reject anyway."
+function getActingUser(request: Request) {
+  const authHeader = request.headers.get("authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = authHeader.slice("Bearer ".length);
+  const userId = token.replace("demo-token-", "");
+
+  return db.users.find((candidate) => candidate.id === userId) ?? null;
+}
+
 export const handlers = [
   // Log in
   http.post("/api/login", async ({ request }) => {
@@ -24,24 +43,54 @@ export const handlers = [
     });
   }),
 
-  // Get all requests
-  http.get("/api/requests", () => {
-    return HttpResponse.json(db.requests);
+  // Get all requests (staff see all; requesters see only their own)
+  http.get("/api/requests", ({ request: httpRequest }) => {
+    const actingUser = getActingUser(httpRequest);
+
+    if (!actingUser) {
+      return new HttpResponse(null, {
+        status: 401,
+      });
+    }
+
+    const visibleRequests =
+      actingUser.role === "requester"
+        ? db.requests.filter((r) => r.requesterId === actingUser.id)
+        : db.requests;
+
+    return HttpResponse.json(visibleRequests);
   }),
 
-  // Get a request by id
-  http.get("/api/requests/:id", ({ params }) => {
-    const request = db.requests.find(
-      (request) => request.id === params.id
+  // Get a request by id (owner or any staff member; 403 otherwise)
+  http.get("/api/requests/:id", ({ params, request: httpRequest }) => {
+    const actingUser = getActingUser(httpRequest);
+
+    if (!actingUser) {
+      return new HttpResponse(null, {
+        status: 401,
+      });
+    }
+
+    const existingRequest = db.requests.find(
+      (r) => r.id === params.id
     );
 
-    if (!request) {
+    if (!existingRequest) {
       return new HttpResponse(null, {
         status: 404,
       });
     }
 
-    return HttpResponse.json(request);
+    const isOwner = existingRequest.requesterId === actingUser.id;
+    const isStaff = actingUser.role === "technician" || actingUser.role === "admin";
+
+    if (!isOwner && !isStaff) {
+      return new HttpResponse(null, {
+        status: 403,
+      });
+    }
+
+    return HttpResponse.json(existingRequest);
   }),
 
   // Create a new request

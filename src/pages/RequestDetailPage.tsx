@@ -7,6 +7,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { requestService } from "../services/requestService";
 import { messageService } from "../services/messageService";
 import { userService } from "../services/userService";
+import { ApiError } from "../services/errors";
 import { useAuth } from "../features/auth/useAuth";
 
 import type { Message, Request, User } from "../shared/types";
@@ -30,10 +31,12 @@ function RequestDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [commentBody, setCommentBody] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isCancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [isCloseConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   // Load request, messages, and users when the component mounts or the ID changes
   useEffect(() => {
@@ -53,8 +56,13 @@ function RequestDetailPage() {
       setThreadMessages(messages);
       setUsers(users);
       setError(null);
-    } catch {
-      setError("Failed to load request.");
+      setForbidden(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setForbidden(true);
+      } else {
+        setError("Failed to load request.");
+      }
     } finally {
       setLoading(false);
     }
@@ -85,6 +93,20 @@ function RequestDetailPage() {
     );
   }
 
+  if (forbidden) {
+    return (
+      <AppLayout>
+        <section className="space-y-4 text-center">
+          <h2 className="text-2xl font-bold">Not authorized</h2>
+          <p className="text-[var(--color-text-secondary)]">
+            You don't have permission to view this request.
+          </p>
+          <Button onClick={() => navigate("/my-requests")}>Back to My Requests</Button>
+        </section>
+      </AppLayout>
+    );
+  }
+
   if (!request) {
     return (
       <AppLayout>
@@ -109,22 +131,15 @@ function RequestDetailPage() {
   const isOwner = user.id === request.requesterId;
   const isStaff = user.role === "technician" || user.role === "admin";
 
-  if (!isOwner && !isStaff) {
-    return (
-      <AppLayout>
-        <section className="space-y-4 text-center">
-          <h2 className="text-2xl font-bold">Not authorized</h2>
-          <p className="text-[var(--color-text-secondary)]">
-            You don't have permission to view this request.
-          </p>
-          <Button onClick={() => navigate("/my-requests")}>Back to My Requests</Button>
-        </section>
-      </AppLayout>
-    );
-  }
-
   const canComment = request.status === "open" || request.status === "pending";
-  const canCancel = request.status === "open";
+  const canCancel = user.role === "requester" && isOwner && request.status === "open";
+  const canSetPending = isStaff && request.status === "open";
+  const canReopen = isStaff && request.status === "pending";
+  const canClose = user.role === "admin" && (request.status === "open" || request.status === "pending");
+  const canAssignToMe =
+    isStaff &&
+    (request.status === "open" || request.status === "pending") &&
+    request.assigneeId !== user.id;
 
   async function handleCancelConfirm() {
     if (!request || !user) {
@@ -153,6 +168,68 @@ function RequestDetailPage() {
       console.error("Failed to cancel request:", error);
     } finally {
       setCancelConfirmOpen(false);
+    }
+  }
+
+  async function handleStatusChange(nextStatus: "open" | "pending") {
+    if (!request) {
+      return;
+    }
+
+    try {
+      const updated = await requestService.update(request.id, {
+        status: nextStatus,
+      });
+
+      setRequest(updated);
+    } catch (error) {
+      console.error("Failed to update request status:", error);
+    }
+  }
+
+  async function handleAssignToMe() {
+    if (!request || !user) {
+      return;
+    }
+
+    try {
+      const updated = await requestService.update(request.id, {
+        assigneeId: user.id,
+      });
+
+      setRequest(updated);
+    } catch (error) {
+      console.error("Failed to assign request:", error);
+    }
+  }
+
+  async function handleCloseConfirm() {
+    if (!request || !user) {
+      return;
+    }
+
+    try {
+      const updated = await requestService.update(request.id, {
+        status: "closed",
+      });
+
+      setRequest(updated);
+
+      const systemMessage = {
+        id: crypto.randomUUID(),
+        requestId: request.id,
+        authorId: user.id,
+        body: "Closed by admin",
+        createdAt: new Date().toISOString(),
+      };
+
+      await messageService.create(systemMessage);
+
+      setThreadMessages((prev) => [...prev, systemMessage]);
+    } catch (error) {
+      console.error("Failed to close request:", error);
+    } finally {
+      setCloseConfirmOpen(false);
     }
   }
 
@@ -200,11 +277,37 @@ function RequestDetailPage() {
               </div>
             </div>
 
-            {canCancel && (
-              <Button variant="danger" onClick={() => setCancelConfirmOpen(true)}>
-                Cancel request
-              </Button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {canSetPending && (
+                <Button variant="secondary" onClick={() => handleStatusChange("pending")}>
+                  Set Pending
+                </Button>
+              )}
+
+              {canReopen && (
+                <Button variant="secondary" onClick={() => handleStatusChange("open")}>
+                  Reopen
+                </Button>
+              )}
+
+              {canAssignToMe && (
+                <Button variant="secondary" onClick={handleAssignToMe}>
+                  Assign to me
+                </Button>
+              )}
+
+              {canClose && (
+                <Button variant="danger" onClick={() => setCloseConfirmOpen(true)}>
+                  Close request
+                </Button>
+              )}
+
+              {canCancel && (
+                <Button variant="danger" onClick={() => setCancelConfirmOpen(true)}>
+                  Cancel request
+                </Button>
+              )}
+            </div>
           </div>
 
           <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
@@ -268,6 +371,17 @@ function RequestDetailPage() {
         variant="danger"
         onConfirm={handleCancelConfirm}
         onCancel={() => setCancelConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={isCloseConfirmOpen}
+        title="Close this request?"
+        description="This can't be undone. The requester and any assignee will see it as closed."
+        confirmLabel="Close request"
+        cancelLabel="Keep request"
+        variant="danger"
+        onConfirm={handleCloseConfirm}
+        onCancel={() => setCloseConfirmOpen(false)}
       />
     </AppLayout>
   );
