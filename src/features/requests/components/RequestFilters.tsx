@@ -1,3 +1,5 @@
+import { cn } from "../../../shared/utils/cn";
+
 interface RequestFiltersProps {
   search: string;
   status: string;
@@ -8,6 +10,10 @@ interface RequestFiltersProps {
   onStatusChange: (value: string) => void;
   onPriorityChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
+
+  // Queue-only - My Requests simply doesn't pass these, so the control never renders there.
+  assignee?: string;
+  onAssigneeChange?: (value: string) => void;
 }
 
 function RequestFilters({
@@ -19,10 +25,17 @@ function RequestFilters({
   onStatusChange,
   onPriorityChange,
   onCategoryChange,
+  assignee,
+  onAssigneeChange,
 }: RequestFiltersProps) {
   return (
     <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-4 md:grid-cols-2",
+          onAssigneeChange ? "xl:grid-cols-5" : "xl:grid-cols-4"
+        )}
+      >
         {/* Search */}
         <input
           type="text"
@@ -69,6 +82,19 @@ function RequestFilters({
           <option value="facilities">Facilities</option>
           <option value="access">Access</option>
         </select>
+
+        {/* Assignee - Queue only */}
+        {onAssigneeChange && (
+          <select
+            value={assignee ?? "all"}
+            onChange={(e) => onAssigneeChange(e.target.value)}
+            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]"
+          >
+            <option value="all">All Assignees</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="me">Assigned to me</option>
+          </select>
+        )}
       </div>
     </section>
   );
