@@ -1,14 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 import AppLayout from "../layouts/AppLayout";
 import { Button } from "../components/ui/Button";
 import { requestService } from "../services/requestService";
 import { messageService } from "../services/messageService";
+import { ApiError } from "../services/errors";
+import { useAuth } from "../features/auth/useAuth";
 import type { RequestCategory, RequestPriority } from "../shared/types";
-
-// No auth yet 
-const CURRENT_USER_ID = "u1";
 
 interface FormState {
   title: string;
@@ -50,6 +50,7 @@ function validate(form: FormState) {
 
 function NewRequestPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [form, setForm] = useState<FormState>(initialForm);
   const [touched, setTouched] = useState<Record<FormField, boolean>>({
     title: false,
@@ -59,6 +60,7 @@ function NewRequestPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const errors = validate(form);
   const isValid = Object.keys(errors).length === 0;
@@ -75,11 +77,12 @@ function NewRequestPage() {
     event.preventDefault();
     setTouched({ title: true, description: true, category: true, priority: true });
 
-    if (!isValid || isSubmitting) {
+    if (!isValid || isSubmitting || !user) {
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError(null);
 
     const timestamp = new Date().toISOString();
 
@@ -89,7 +92,7 @@ function NewRequestPage() {
     status: "open" as const,
     category: form.category as RequestCategory,
     priority: form.priority as RequestPriority,
-    requesterId: CURRENT_USER_ID,
+    requesterId: user.id,
     assigneeId: null,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -101,13 +104,18 @@ function NewRequestPage() {
      await messageService.create({
        id: crypto.randomUUID(),
        requestId: created.id,
-       authorId: CURRENT_USER_ID,
+       authorId: user.id,
        body: form.description.trim(),
        createdAt: timestamp,
      });
 
      navigate("/my-requests");
     } catch (error) {
+      if (error instanceof ApiError && error.status === 403) {
+        setSubmitError("You don't have permission to create a request.");
+      } else {
+        setSubmitError("Something went wrong. Please try again.");
+      }
       console.error("Failed to create request:", error);
       setIsSubmitting(false);
     }
@@ -116,6 +124,15 @@ function NewRequestPage() {
   return (
     <AppLayout>
       <section className="mx-auto max-w-xl space-y-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/my-requests")}
+          className="-ml-3"
+        >
+          <ArrowLeft className="size-4" />
+          Back to My Requests
+        </Button>
+
         <h2 className="text-3xl font-bold">New Request</h2>
 
         <form
@@ -123,6 +140,15 @@ function NewRequestPage() {
           noValidate
           className="space-y-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
         >
+          {submitError && (
+            <p
+              role="alert"
+              className="rounded-md border border-red-500/20 bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {submitError}
+            </p>
+          )}
+
           <div>
             <label htmlFor="title" className="mb-1 block text-sm font-medium">
               Title
