@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 /* =========================
-   Design Tokens (Light)
+   Design Tokens (Light) #7c3aed and  #0d9488 
 ========================= */
 
 :root {
   /* Brand */
-  --color-primary: #990000;
-  --color-primary-hover: #7d0000;
-  --color-secondary: #ffd54f;
+  --color-primary: #670eff;
+  --color-primary-hover: #6d28d9;
+  --color-secondary: #01d898;
 
   /* Background */
   --color-background: #ffffff;
@@ -38,7 +38,7 @@
   --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
 
   /* Font */
-  --font-family: Inter, system-ui, sans-serif;
+  --font-family: "Inter Variable", Inter, system-ui, sans-serif;
 }
 
 /* =========================
@@ -46,13 +46,13 @@
 ========================= */
 
 .dark {
-  --color-background: #111827;
-  --color-surface: #1f2937;
+  --color-background: #1f1f21;
+  --color-surface: #2b2c30; 
 
   --color-text: #f9fafb;
   --color-text-secondary: #d1d5db;
 
-  --color-border: #374151;
+  --color-border: #4b4c4e;
 }
 
 /* =========================
