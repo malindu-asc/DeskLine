@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Request } from "../../../shared/types";
 import RequestCard from "./RequestCard";
 
@@ -6,6 +7,7 @@ interface RequestListProps {
   totalCount: number;
   emptyTitle?: string;
   emptyDescription?: string;
+  emptyAction?: ReactNode;
 }
 
 function RequestList({
@@ -13,6 +15,7 @@ function RequestList({
   totalCount,
   emptyTitle = "No requests yet",
   emptyDescription = "Requests will show up here once they exist.",
+  emptyAction,
 }: RequestListProps) {
   if (totalCount === 0) {
     return (
@@ -22,6 +25,8 @@ function RequestList({
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
           {emptyDescription}
         </p>
+
+        {emptyAction && <div className="mt-4">{emptyAction}</div>}
       </div>
     );
   }

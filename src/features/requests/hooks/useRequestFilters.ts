@@ -23,6 +23,10 @@ export function useRequestFilters(requests: Request[]) {
     setSearchParams(next);
   }
 
+  function clearAll(){
+    setSearchParams(new URLSearchParams());
+  }
+
   const filteredRequests = filterRequests(requests, {
     search,
     status,
@@ -39,6 +43,7 @@ export function useRequestFilters(requests: Request[]) {
     setStatus: (value: string) => updateParam("status", value),
     setPriority: (value: string) => updateParam("priority", value),
     setCategory: (value: string) => updateParam("category", value),
+    clearAll,
     filteredRequests,
   };
 }
