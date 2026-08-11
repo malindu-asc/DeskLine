@@ -81,7 +81,10 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[var(--color-text)]">Deskline</h1>
+          <h1 className="text-2xl font-bold">
+            <span className="text-[var(--color-primary)]">Desk</span>
+            <span className="text-[var(--color-secondary)]">Line</span>
+          </h1>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             Sign in to continue
           </p>
