@@ -1,4 +1,3 @@
-import { cn } from "../../../shared/utils/cn";
 import {X} from "lucide-react";
 import {Button} from "../../../components/ui/Button";
 
@@ -46,12 +45,13 @@ function RequestFilters({
   
   return (
     <section className="@container rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-      <div
-        className={cn(
-          "grid grid-cols-1 gap-4 @lg:grid-cols-2",
-          onAssigneeChange ? "@4xl:grid-cols-5" : "@3xl:grid-cols-4"
-        )}
-      >
+      {/* Plain string, not cn() - Queue and My Requests used to split
+          5-vs-4 columns here, but 5 equal columns didn't leave enough
+          room for select text like "Unassigned" to fit without
+          truncating. Both now share this same 4-column cap (Assignee,
+          Queue's 5th field, wraps to its own row), so there's no
+          longer a condition for cn() to merge. */}
+      <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @3xl:grid-cols-4">
         {/* Search */}
         <div className="flex items-center gap-2">
           <label htmlFor="filter-search" className={labelClassName}>
@@ -115,7 +115,7 @@ function RequestFilters({
             onChange={(e) => onCategoryChange(e.target.value)}
             className={controlClassName}
           >
-            <option value="all">All Category</option>
+            <option value="all">All Categories</option>
             <option value="hardware">Hardware</option>
             <option value="software">Software</option>
             <option value="facilities">Facilities</option>
