@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import type { Request } from "../../../shared/types";
+import type { Request, User } from "../../../shared/types";
 import RequestCard from "./RequestCard";
 
 interface RequestListProps {
   requests: Request[];
+  users: User[];
   totalCount: number;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -12,6 +13,7 @@ interface RequestListProps {
 
 function RequestList({
   requests,
+  users,
   totalCount,
   emptyTitle = "No requests yet",
   emptyDescription = "Requests will show up here once they exist.",
@@ -49,6 +51,7 @@ function RequestList({
         <RequestCard
           key={request.id}
           request={request}
+          users={users}
         />
       ))}
     </div>

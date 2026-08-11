@@ -1,7 +1,9 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Calendar, Clock, Send, User as UserIcon } from "lucide-react";
 import AppLayout from "../layouts/AppLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { Avatar } from "../components/ui/Avatar";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { useEffect, useState, type FormEvent } from "react";
 import { requestService } from "../services/requestService";
@@ -9,6 +11,7 @@ import { messageService } from "../services/messageService";
 import { userService } from "../services/userService";
 import { ApiError } from "../services/errors";
 import { useAuth } from "../features/auth/useAuth";
+import { getUserName } from "../shared/utils/getUserName";
 
 import type { Message, Request, User } from "../shared/types";
 
@@ -21,14 +24,6 @@ function RequestDetailPage() {
   const [threadMessages, setThreadMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<User[]>([]);
 
-  function getUserName(userId: string | null) {
-    if (!userId) {
-      return "Unassigned";
-    }
-
-    return users.find((user) => user.id === userId)?.name ?? "Unknown";
-  }
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -37,6 +32,15 @@ function RequestDetailPage() {
   const [isSending, setIsSending] = useState(false);
   const [isCancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isCloseConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  function describeActionError(err: unknown): string {
+    if (err instanceof ApiError && err.status === 403) {
+      return "You don't have permission to do that.";
+    }
+
+    return "Something went wrong. Please try again.";
+  }
 
   // Load request, messages, and users when the component mounts or the ID changes
   useEffect(() => {
@@ -93,6 +97,16 @@ function RequestDetailPage() {
     );
   }
 
+  if (!user) {
+    // ProtectedRoute guarantees a logged-in user reaches this page; this
+    // just satisfies the type checker and keeps the component safe in
+    // isolation, without asserting past the AuthContextValue type.
+    return null;
+  }
+
+  const homePath = user.role === "requester" ? "/my-requests" : "/queue";
+  const homeLabel = user.role === "requester" ? "Back to My Requests" : "Back to Queue";
+
   if (forbidden) {
     return (
       <AppLayout>
@@ -101,7 +115,7 @@ function RequestDetailPage() {
           <p className="text-[var(--color-text-secondary)]">
             You don't have permission to view this request.
           </p>
-          <Button onClick={() => navigate("/my-requests")}>Back to My Requests</Button>
+          <Button onClick={() => navigate(homePath)}>{homeLabel}</Button>
         </section>
       </AppLayout>
     );
@@ -115,17 +129,10 @@ function RequestDetailPage() {
           <p className="text-[var(--color-text-secondary)]">
             This request may have been removed, or the link is incorrect.
           </p>
-          <Button onClick={() => navigate("/my-requests")}>Back to My Requests</Button>
+          <Button onClick={() => navigate(homePath)}>{homeLabel}</Button>
         </section>
       </AppLayout>
     );
-  }
-
-  if (!user) {
-    // ProtectedRoute guarantees a logged-in user reaches this page; this
-    // just satisfies the type checker and keeps the component safe in
-    // isolation, without asserting past the AuthContextValue type.
-    return null;
   }
 
   const isOwner = user.id === request.requesterId;
@@ -146,13 +153,12 @@ function RequestDetailPage() {
       return;
     }
 
+    setActionError(null);
+
     try {
-      const updated = await requestService.update(request.id, {
-        status: "cancelled",
-      });
-
-      setRequest(updated);
-
+      // Posted before the status change: the mock API only accepts new
+      // messages while a request is open/pending, so this must land while
+      // that's still true, not after cancellation has already taken effect.
       const systemMessage = {
         id: crypto.randomUUID(),
         requestId: request.id,
@@ -162,9 +168,15 @@ function RequestDetailPage() {
       };
 
       await messageService.create(systemMessage);
-
       setThreadMessages((prev) => [...prev, systemMessage]);
+
+      const updated = await requestService.update(request.id, {
+        status: "cancelled",
+      });
+
+      setRequest(updated);
     } catch (error) {
+      setActionError(describeActionError(error));
       console.error("Failed to cancel request:", error);
     } finally {
       setCancelConfirmOpen(false);
@@ -176,6 +188,8 @@ function RequestDetailPage() {
       return;
     }
 
+    setActionError(null);
+
     try {
       const updated = await requestService.update(request.id, {
         status: nextStatus,
@@ -183,6 +197,7 @@ function RequestDetailPage() {
 
       setRequest(updated);
     } catch (error) {
+      setActionError(describeActionError(error));
       console.error("Failed to update request status:", error);
     }
   }
@@ -192,6 +207,8 @@ function RequestDetailPage() {
       return;
     }
 
+    setActionError(null);
+
     try {
       const updated = await requestService.update(request.id, {
         assigneeId: user.id,
@@ -199,6 +216,7 @@ function RequestDetailPage() {
 
       setRequest(updated);
     } catch (error) {
+      setActionError(describeActionError(error));
       console.error("Failed to assign request:", error);
     }
   }
@@ -208,13 +226,10 @@ function RequestDetailPage() {
       return;
     }
 
+    setActionError(null);
+
     try {
-      const updated = await requestService.update(request.id, {
-        status: "closed",
-      });
-
-      setRequest(updated);
-
+      // Posted before the status change - see handleCancelConfirm for why.
       const systemMessage = {
         id: crypto.randomUUID(),
         requestId: request.id,
@@ -224,9 +239,15 @@ function RequestDetailPage() {
       };
 
       await messageService.create(systemMessage);
-
       setThreadMessages((prev) => [...prev, systemMessage]);
+
+      const updated = await requestService.update(request.id, {
+        status: "closed",
+      });
+
+      setRequest(updated);
     } catch (error) {
+      setActionError(describeActionError(error));
       console.error("Failed to close request:", error);
     } finally {
       setCloseConfirmOpen(false);
@@ -241,6 +262,7 @@ function RequestDetailPage() {
     }
 
     setIsSending(true);
+    setActionError(null);
 
     const message = {
       id: crypto.randomUUID(),
@@ -256,15 +278,41 @@ function RequestDetailPage() {
       setThreadMessages((prev) => [...prev, message]);
       setCommentBody("");
     } catch (error) {
+      setActionError(describeActionError(error));
       console.error("Failed to send message:", error);
     } finally {
       setIsSending(false);
     }
   }
 
+  const requesterName = getUserName(users, request.requesterId);
+  const assigneeName = getUserName(users, request.assigneeId);
+  const createdDate = new Date(request.createdAt).toLocaleDateString(undefined, {
+    dateStyle: "medium",
+  });
+  const updatedDate = new Date(request.updatedAt).toLocaleDateString(undefined, {
+    dateStyle: "medium",
+  });
+
   return (
     <AppLayout>
       <section className="space-y-6">
+        <Link to={homePath} className="-ml-3 inline-block">
+          <Button variant="ghost">
+            <ArrowLeft className="size-4" />
+            {homeLabel}
+          </Button>
+        </Link>
+
+        {actionError && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-500/20 bg-red-50 px-3 py-2 text-sm text-red-700"
+          >
+            {actionError}
+          </p>
+        )}
+
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -310,17 +358,43 @@ function RequestDetailPage() {
             </div>
           </div>
 
-          <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+          <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div>
               <dt className="font-medium text-[var(--color-text)]">Requester</dt>
-              <dd className="text-[var(--color-text-secondary)]">
-                {getUserName(request.requesterId)}
+              <dd className="mt-1 flex items-center gap-2 text-[var(--color-text-secondary)]">
+                <Avatar name={requesterName} size="sm" />
+                <span className="truncate">{requesterName}</span>
               </dd>
             </div>
             <div>
               <dt className="font-medium text-[var(--color-text)]">Assignee</dt>
-              <dd className="text-[var(--color-text-secondary)]">
-                {getUserName(request.assigneeId)}
+              <dd className="mt-1 flex items-center gap-2 text-[var(--color-text-secondary)]">
+                {request.assigneeId ? (
+                  <Avatar name={assigneeName} size="sm" />
+                ) : (
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--color-border)] text-[var(--color-text-secondary)]">
+                    <UserIcon className="size-3.5" />
+                  </span>
+                )}
+                <span className="truncate">{assigneeName}</span>
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-[var(--color-text)]">Created</dt>
+              <dd className="mt-1 flex items-center gap-2 text-[var(--color-text-secondary)]">
+                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--color-border)] text-[var(--color-text-secondary)]">
+                  <Calendar className="size-3.5" />
+                </span>
+                <span>{createdDate}</span>
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-[var(--color-text)]">Last updated</dt>
+              <dd className="mt-1 flex items-center gap-2 text-[var(--color-text-secondary)]">
+                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--color-border)] text-[var(--color-text-secondary)]">
+                  <Clock className="size-3.5" />
+                </span>
+                <span>{updatedDate}</span>
               </dd>
             </div>
           </dl>
@@ -332,28 +406,31 @@ function RequestDetailPage() {
               key={message.id}
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
             >
-              <p className="text-sm font-medium">{getUserName(message.authorId)}</p>
-              <p className="mt-1 text-sm text-[var(--color-text)]">{message.body}</p>
+              <p className="text-sm font-medium">{getUserName(users, message.authorId)}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">{message.body}</p>
             </div>
           ))}
         </div>
 
         {canComment ? (
-          <form onSubmit={handleCommentSubmit} className="flex gap-3">
+          <form onSubmit={handleCommentSubmit} className="space-y-3">
             <label htmlFor="comment" className="sr-only">
               Add a comment
             </label>
-            <input
+            <textarea
               id="comment"
-              type="text"
+              rows={3}
               value={commentBody}
               onChange={(e) => setCommentBody(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)] outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+              className="w-full resize-y rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)] outline-none focus:ring-2 focus:ring-[var(--color-info)]"
             />
-            <Button type="submit" disabled={isSending || !commentBody.trim()}>
-              {isSending ? "Sending..." : "Send"}
-            </Button>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isSending || !commentBody.trim()}>
+                <Send className="size-4" />
+                {isSending ? "Sending..." : "Send"}
+              </Button>
+            </div>
           </form>
         ) : (
           <p className="text-sm italic text-[var(--color-text-secondary)]">

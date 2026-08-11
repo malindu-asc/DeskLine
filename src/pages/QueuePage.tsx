@@ -8,14 +8,16 @@ import { useAuth } from "../features/auth/useAuth";
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { Request } from "../shared/types";
+import type { Request, User } from "../shared/types";
 import { requestService } from "../services/requestService";
+import { userService } from "../services/userService";
 
 function QueuePage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [requests, setRequests] = useState<Request[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -30,6 +32,7 @@ function QueuePage() {
     setPriority,
     setCategory,
     filteredRequests,
+    clearAll
   } = useRequestFilters(requests);
 
   const assignee = (searchParams.get("assignee") ?? "all") as AssigneeFilter;
@@ -55,9 +58,13 @@ function QueuePage() {
       try {
         setLoading(true);
 
-        const data = await requestService.getAll();
+        const [requestsData, usersData] = await Promise.all([
+          requestService.getAll(),
+          userService.getAll(),
+        ]);
 
-        setRequests(data);
+        setRequests(requestsData);
+        setUsers(usersData);
         setError(null);
       } catch {
         setError("Failed to load requests.");
@@ -107,10 +114,12 @@ function QueuePage() {
           onCategoryChange={setCategory}
           assignee={assignee}
           onAssigneeChange={setAssignee}
+          onClearFilters={clearAll}
         />
 
         <RequestList
           requests={visibleRequests}
+          users={users}
           totalCount={requests.length}
           emptyTitle="The queue is empty"
           emptyDescription="There are no requests to work on right now."
