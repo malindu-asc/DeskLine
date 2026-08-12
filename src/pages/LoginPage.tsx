@@ -98,7 +98,7 @@ function LoginPage() {
           {authError && (
             <p
               role="alert"
-              className="rounded-md border border-red-500/20 bg-red-50 px-3 py-2 text-sm text-red-700"
+              className="rounded-md border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 px-3 py-2 text-sm text-[var(--color-danger)]"
             >
               {authError}
             </p>

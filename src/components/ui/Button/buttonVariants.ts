@@ -15,7 +15,7 @@ export const buttonVariants = cva(
           "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-border)]",
 
         danger:
-          "bg-red-600 text-white hover:bg-red-700",
+          "bg-[var(--color-danger)] text-white hover:bg-red-700",
 
         ghost:
           "bg-transparent text-[var(--color-text)] hover:bg-[var(--color-border)]",
