@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import type { Request, User } from "../shared/types";
 import { requestService } from "../services/requestService";
 import { userService } from "../services/userService";
+import { LoadingState } from "../components/ui/LoadingState";
+import { ErrorState } from "../components/ui/ErrorState";
 
 function MyRequestsPage() {
 
@@ -55,10 +57,10 @@ function MyRequestsPage() {
     loadRequests();
   }, [retryCount]);
 
-  if (loading) {
+    if (loading) {
     return (
       <AppLayout>
-        <p className="p-6">Loading requests...</p>
+        <LoadingState message="Loading requests..." />
       </AppLayout>
     );
   }
@@ -66,14 +68,11 @@ function MyRequestsPage() {
   if (error) {
     return (
       <AppLayout>
-        <div className="space-y-4 p-6">
-          <p>{error}</p>
-
-          <Button onClick={() => setRetryCount((count) => count + 1)}>Retry</Button>
-        </div>
+        <ErrorState message={error} onRetry={() => setRetryCount((count) => count + 1)} />
       </AppLayout>
     );
   }
+
 
   const newRequestButton = (
     <Link to="/requests/new">

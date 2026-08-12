@@ -2,7 +2,6 @@ import AppLayout from "../layouts/AppLayout";
 import { useRequestFilters } from "../features/requests/hooks/useRequestFilters";
 import RequestFilters from "../features/requests/components/RequestFilters";
 import RequestList from "../features/requests/components/RequestList";
-import { Button } from "../components/ui/Button";
 import { filterByAssignee, type AssigneeFilter } from "../features/requests/utils/filterByAssignee";
 import { useAuth } from "../features/auth/useAuth";
 
@@ -11,6 +10,8 @@ import { useSearchParams } from "react-router-dom";
 import type { Request, User } from "../shared/types";
 import { requestService } from "../services/requestService";
 import { userService } from "../services/userService";
+import { LoadingState } from "../components/ui/LoadingState";
+import { ErrorState } from "../components/ui/ErrorState";
 
 function QueuePage() {
   const { user } = useAuth();
@@ -79,7 +80,7 @@ function QueuePage() {
   if (loading) {
     return (
       <AppLayout>
-        <p className="p-6">Loading queue...</p>
+        <LoadingState message="Loading queue..." />
       </AppLayout>
     );
   }
@@ -87,11 +88,7 @@ function QueuePage() {
   if (error) {
     return (
       <AppLayout>
-        <div className="space-y-4 p-6">
-          <p>{error}</p>
-
-          <Button onClick={() => setRetryCount((count) => count + 1)}>Retry</Button>
-        </div>
+        <ErrorState message={error} onRetry={() => setRetryCount((count) => count + 1)} />
       </AppLayout>
     );
   }

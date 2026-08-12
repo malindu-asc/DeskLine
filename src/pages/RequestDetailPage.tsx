@@ -12,6 +12,8 @@ import { userService } from "../services/userService";
 import { ApiError } from "../services/errors";
 import { useAuth } from "../features/auth/useAuth";
 import { getUserName } from "../shared/utils/getUserName";
+import { LoadingState } from "../components/ui/LoadingState";
+import { ErrorState } from "../components/ui/ErrorState";
 
 import type { Message, Request, User } from "../shared/types";
 
@@ -33,6 +35,7 @@ function RequestDetailPage() {
   const [isCancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isCloseConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [reassignTo, setReassignTo] = useState("");
 
   function describeActionError(err: unknown): string {
     if (err instanceof ApiError && err.status === 403) {
@@ -49,6 +52,12 @@ function RequestDetailPage() {
 
     try {
       setLoading(true);
+      // Reset every outcome flag at the start of each attempt - otherwise a
+      // stale error/forbidden from a previous attempt could mask whichever
+      // outcome this attempt actually lands on (error is checked before
+      // forbidden/!request in the render logic below).
+      setError(null);
+      setForbidden(false);
 
       const [request, messages, users] = await Promise.all([
         requestService.getById(id),
@@ -59,11 +68,11 @@ function RequestDetailPage() {
       setRequest(request);
       setThreadMessages(messages);
       setUsers(users);
-      setError(null);
-      setForbidden(false);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setForbidden(true);
+      } else if (err instanceof ApiError && err.status === 404) {
+        setRequest(null);
       } else {
         setError("Failed to load request.");
       }
@@ -78,7 +87,7 @@ function RequestDetailPage() {
   if (loading) {
     return (
       <AppLayout>
-        <p className="p-6">Loading request...</p>
+        <LoadingState message="Loading request..." />
       </AppLayout>
     );
   }
@@ -86,13 +95,7 @@ function RequestDetailPage() {
   if (error) {
     return (
       <AppLayout>
-        <div className="space-y-4 p-6">
-          <p>{error}</p>
-
-          <Button onClick={() => setRetryCount((count) => count + 1)}>
-            Retry
-          </Button>
-        </div>
+        <ErrorState message={error} onRetry={() => setRetryCount((count) => count + 1)} />
       </AppLayout>
     );
   }
@@ -147,6 +150,9 @@ function RequestDetailPage() {
     isStaff &&
     (request.status === "open" || request.status === "pending") &&
     request.assigneeId !== user.id;
+  const staffUsers = users.filter((u) => u.role === "technician" || u.role === "admin");
+  const canReassign = user.role === "admin" && (request.status === "open" || request.status === "pending");
+  const hasAnyAction = canSetPending || canReopen || canAssignToMe || canClose || canCancel || canReassign;
 
   async function handleCancelConfirm() {
     if (!request || !user) {
@@ -220,6 +226,28 @@ function RequestDetailPage() {
       console.error("Failed to assign request:", error);
     }
   }
+
+  //reassign to another staff member
+    async function handleReassign() {
+    if (!request || !reassignTo || reassignTo === request.assigneeId) {
+      return;
+    }
+
+    setActionError(null);
+
+    try {
+      const updated = await requestService.update(request.id, {
+        assigneeId: reassignTo,
+      });
+
+      setRequest(updated);
+      setReassignTo("");
+    } catch (error) {
+      setActionError(describeActionError(error));
+      console.error("Failed to reassign request:", error);
+    }
+  }
+
 
   async function handleCloseConfirm() {
     if (!request || !user) {
@@ -314,48 +342,12 @@ function RequestDetailPage() {
         )}
 
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold">{request.title}</h2>
+          <h2 className="text-2xl font-bold">{request.title}</h2>
 
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Badge variant={request.status}>{request.status}</Badge>
-                <Badge variant={request.priority}>{request.priority}</Badge>
-                <Badge variant={request.category}>{request.category}</Badge>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {canSetPending && (
-                <Button variant="secondary" onClick={() => handleStatusChange("pending")}>
-                  Set Pending
-                </Button>
-              )}
-
-              {canReopen && (
-                <Button variant="secondary" onClick={() => handleStatusChange("open")}>
-                  Reopen
-                </Button>
-              )}
-
-              {canAssignToMe && (
-                <Button variant="secondary" onClick={handleAssignToMe}>
-                  Assign to me
-                </Button>
-              )}
-
-              {canClose && (
-                <Button variant="danger" onClick={() => setCloseConfirmOpen(true)}>
-                  Close request
-                </Button>
-              )}
-
-              {canCancel && (
-                <Button variant="danger" onClick={() => setCancelConfirmOpen(true)}>
-                  Cancel request
-                </Button>
-              )}
-            </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge variant={request.status}>{request.status}</Badge>
+            <Badge variant={request.priority}>{request.priority}</Badge>
+            <Badge variant={request.category}>{request.category}</Badge>
           </div>
 
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
@@ -400,13 +392,91 @@ function RequestDetailPage() {
           </dl>
         </div>
 
+        {hasAnyAction && (
+          <div>
+            <h3 className="text-lg font-semibold text-[var(--color-text)]">Actions</h3>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              {canSetPending && (
+                <Button variant="info" onClick={() => handleStatusChange("pending")}>
+                  Set Pending
+                </Button>
+              )}
+
+              {canReopen && (
+                <Button variant="info" onClick={() => handleStatusChange("open")}>
+                  Reopen
+                </Button>
+              )}
+
+              {canAssignToMe && (
+                <Button variant="info" onClick={handleAssignToMe}>
+                  Assign to me
+                </Button>
+              )}
+              
+                {canReassign && (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="reassign-select" className="sr-only">
+                    Reassign to
+                  </label>
+                  <select
+                    id="reassign-select"
+                    value={reassignTo}
+                    onChange={(e) => setReassignTo(e.target.value)}
+                    className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                  >
+                    <option value="">Reassign to...</option>
+                    {staffUsers.map((staffUser) => (
+                      <option key={staffUser.id} value={staffUser.id}>
+                        {staffUser.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button
+                    variant="info"
+                    onClick={handleReassign}
+                    disabled={!reassignTo || reassignTo === request.assigneeId}
+                  >
+                    Reassign
+                  </Button>
+                </div>
+              )}
+
+
+              {canClose && (
+                <Button variant="danger" onClick={() => setCloseConfirmOpen(true)}>
+                  Close request
+                </Button>
+              )}
+
+              {canCancel && (
+                <Button variant="danger" onClick={() => setCancelConfirmOpen(true)}>
+                  Cancel request
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <h3 className="text-lg font-semibold text-[var(--color-text)]">Activity</h3>
+
         <div className="space-y-3">
           {threadMessages.map((message) => (
             <div
               key={message.id}
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
             >
-              <p className="text-sm font-medium">{getUserName(users, message.authorId)}</p>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-medium">{getUserName(users, message.authorId)}</p>
+                <p className="shrink-0 text-xs text-[var(--color-text-secondary)]">
+                  {new Date(message.createdAt).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </p>
+              </div>
               <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">{message.body}</p>
             </div>
           ))}
@@ -434,7 +504,7 @@ function RequestDetailPage() {
           </form>
         ) : (
           <p className="text-sm italic text-[var(--color-text-secondary)]">
-            This request is {request.status} — the thread is read-only.
+            This request is {request.status} - the thread is read-only.
           </p>
         )}
       </section>
