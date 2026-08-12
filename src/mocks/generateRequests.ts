@@ -1,4 +1,5 @@
 import type {
+  Message,
   Request,
   RequestCategory,
   RequestPriority,
@@ -94,4 +95,19 @@ export function generateRequests(count: number, requesterId: string): Request[] 
       updatedAt: createdAt,
     };
   });
+}
+
+// Every request needs its description as the first message in its thread
+// (spec §4) - generated requests were previously seeded with zero messages,
+// leaving an empty thread on click. Reuses the request's own title rather
+// than a second content pool, since the title already reads like a
+// plausible one-line issue report.
+export function generateMessagesForRequests(requests: Request[]): Message[] {
+  return requests.map((request) => ({
+    id: crypto.randomUUID(),
+    requestId: request.id,
+    authorId: request.requesterId,
+    body: `${request.title}. Please look into this when you get a chance.`,
+    createdAt: request.createdAt,
+  }));
 }

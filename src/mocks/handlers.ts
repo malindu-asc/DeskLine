@@ -1,6 +1,12 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, delay } from "msw";
 import { db } from "./db";
 import { DEMO_PASSWORD } from "./credentials";
+
+// Intentional artificial latency, demo/testing only - the mock API would
+// otherwise resolve near-instantly, making the LoadingState spinner (and
+// the reduce-motion on/off difference on it) too brief to actually see or
+// reliably test. Remove this once it's served its purpose.
+const DEMO_LATENCY_MS = 600;
 
 // Derives "who is calling" from the Authorization header the client attaches
 // (see services/api.ts). The role comes from db.users (the mock's own
@@ -44,7 +50,9 @@ export const handlers = [
   }),
 
   // Get all requests (staff see all; requesters see only their own)
-  http.get("/api/requests", ({ request: httpRequest }) => {
+  http.get("/api/requests", async ({ request: httpRequest }) => {
+    await delay(DEMO_LATENCY_MS);
+
     const actingUser = getActingUser(httpRequest);
 
     if (!actingUser) {
@@ -62,7 +70,9 @@ export const handlers = [
   }),
 
   // Get a request by id (owner or any staff member; 403 otherwise)
-  http.get("/api/requests/:id", ({ params, request: httpRequest }) => {
+  http.get("/api/requests/:id", async ({ params, request: httpRequest }) => {
+    await delay(DEMO_LATENCY_MS);
+
     const actingUser = getActingUser(httpRequest);
 
     if (!actingUser) {
@@ -93,29 +103,81 @@ export const handlers = [
     return HttpResponse.json(existingRequest);
   }),
 
-  // Create a new request
-http.post("/api/requests", async ({ request }) => {
-  const newRequest = await request.json();
+  // Create a new request (requester only; requesterId must be the caller - no "on behalf of" via the API)
+http.post("/api/requests", async ({ request: httpRequest }) => {
+  const actingUser = getActingUser(httpRequest);
 
-  db.requests.unshift(newRequest as (typeof db.requests)[number]);
+  if (!actingUser) {
+    return new HttpResponse(null, { status: 401 });
+  }
+
+  if (actingUser.role !== "requester") {
+    return new HttpResponse(null, { status: 403 });
+  }
+
+  const newRequest = await httpRequest.json() as (typeof db.requests)[number];
+
+  if (newRequest.requesterId !== actingUser.id) {
+    return new HttpResponse(null, { status: 403 });
+  }
+
+  db.requests.unshift(newRequest);
 
   return HttpResponse.json(newRequest, {
     status: 201,
   });
 }),
 
-// Update a request
-http.patch("/api/requests/:id", async ({ params, request }) => {
-  const updates = await request.json() as Partial<(typeof db.requests)[number]>;
+// Update a request (status and/or assignee only; must obey the status
+// lifecycle and action rules - anything else, or an invalid transition, 403)
+http.patch("/api/requests/:id", async ({ params, request: httpRequest }) => {
+  const actingUser = getActingUser(httpRequest);
+
+  if (!actingUser) {
+    return new HttpResponse(null, { status: 401 });
+  }
 
   const existingRequest = db.requests.find(
-    (request) => request.id === params.id
+    (r) => r.id === params.id
   );
 
   if (!existingRequest) {
     return new HttpResponse(null, {
       status: 404,
     });
+  }
+
+  const updates = await httpRequest.json() as Partial<(typeof db.requests)[number]>;
+
+  const allowedKeys = new Set(["status", "assigneeId"]);
+  const hasDisallowedField = Object.keys(updates).some((key) => !allowedKeys.has(key));
+
+  if (hasDisallowedField) {
+    return new HttpResponse(null, { status: 403 });
+  }
+
+  const isOwner = existingRequest.requesterId === actingUser.id;
+  const isStaff = actingUser.role === "technician" || actingUser.role === "admin";
+
+  if (updates.status !== undefined) {
+    const isValidTransition =
+      (updates.status === "pending" && isStaff && existingRequest.status === "open") ||
+      (updates.status === "open" && isStaff && existingRequest.status === "pending") ||
+      (updates.status === "cancelled" && actingUser.role === "requester" && isOwner && existingRequest.status === "open") ||
+      (updates.status === "closed" && actingUser.role === "admin" && (existingRequest.status === "open" || existingRequest.status === "pending"));
+
+    if (!isValidTransition) {
+      return new HttpResponse(null, { status: 403 });
+    }
+  }
+
+  if (updates.assigneeId !== undefined) {
+    const assigningToSelf = updates.assigneeId === actingUser.id;
+    const canAssign = assigningToSelf ? isStaff : actingUser.role === "admin";
+
+    if (!canAssign) {
+      return new HttpResponse(null, { status: 403 });
+    }
   }
 
   Object.assign(existingRequest, updates, {
@@ -154,11 +216,38 @@ http.get("/api/requests/:id/messages", ({ params }) => {
 }),
 
 
-// Create a message
-http.post("/api/requests/:id/messages", async ({ request }) => {
-  const newMessage = await request.json();
+// Create a message (owner or any staff member; only while open/pending;
+// authorId must be the caller - no posting as someone else)
+http.post("/api/requests/:id/messages", async ({ params, request: httpRequest }) => {
+  const actingUser = getActingUser(httpRequest);
 
-  db.messages.push(newMessage as (typeof db.messages)[number]);
+  if (!actingUser) {
+    return new HttpResponse(null, { status: 401 });
+  }
+
+  const existingRequest = db.requests.find((r) => r.id === params.id);
+
+  if (!existingRequest) {
+    return new HttpResponse(null, { status: 404 });
+  }
+
+  const isOwner = existingRequest.requesterId === actingUser.id;
+  const isStaff = actingUser.role === "technician" || actingUser.role === "admin";
+  const canComment =
+    (isOwner || isStaff) &&
+    (existingRequest.status === "open" || existingRequest.status === "pending");
+
+  if (!canComment) {
+    return new HttpResponse(null, { status: 403 });
+  }
+
+  const newMessage = await httpRequest.json() as (typeof db.messages)[number];
+
+  if (newMessage.authorId !== actingUser.id) {
+    return new HttpResponse(null, { status: 403 });
+  }
+
+  db.messages.push(newMessage);
 
   return HttpResponse.json(newMessage, {
     status: 201,
