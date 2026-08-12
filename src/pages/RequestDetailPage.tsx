@@ -36,6 +36,11 @@ function RequestDetailPage() {
   const [isCloseConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [reassignTo, setReassignTo] = useState("");
+  // One shared flag, not one per action - only one of Cancel/Close/Set
+  // Pending/Reopen/Assign-to-me/Reassign can realistically be in flight
+  // against a single request at a time, same reasoning as the single
+  // shared `actionError` above.
+  const [isMutating, setIsMutating] = useState(false);
 
   function describeActionError(err: unknown): string {
     if (err instanceof ApiError && err.status === 403) {
@@ -160,6 +165,7 @@ function RequestDetailPage() {
     }
 
     setActionError(null);
+    setIsMutating(true);
 
     try {
       // Posted before the status change: the mock API only accepts new
@@ -186,6 +192,7 @@ function RequestDetailPage() {
       console.error("Failed to cancel request:", error);
     } finally {
       setCancelConfirmOpen(false);
+      setIsMutating(false);
     }
   }
 
@@ -195,6 +202,7 @@ function RequestDetailPage() {
     }
 
     setActionError(null);
+    setIsMutating(true);
 
     try {
       const updated = await requestService.update(request.id, {
@@ -205,6 +213,8 @@ function RequestDetailPage() {
     } catch (error) {
       setActionError(describeActionError(error));
       console.error("Failed to update request status:", error);
+    } finally {
+      setIsMutating(false);
     }
   }
 
@@ -214,6 +224,7 @@ function RequestDetailPage() {
     }
 
     setActionError(null);
+    setIsMutating(true);
 
     try {
       const updated = await requestService.update(request.id, {
@@ -224,16 +235,19 @@ function RequestDetailPage() {
     } catch (error) {
       setActionError(describeActionError(error));
       console.error("Failed to assign request:", error);
+    } finally {
+      setIsMutating(false);
     }
   }
 
-  //reassign to another staff member
-    async function handleReassign() {
+  // Reassign to another staff member
+  async function handleReassign() {
     if (!request || !reassignTo || reassignTo === request.assigneeId) {
       return;
     }
 
     setActionError(null);
+    setIsMutating(true);
 
     try {
       const updated = await requestService.update(request.id, {
@@ -245,6 +259,8 @@ function RequestDetailPage() {
     } catch (error) {
       setActionError(describeActionError(error));
       console.error("Failed to reassign request:", error);
+    } finally {
+      setIsMutating(false);
     }
   }
 
@@ -255,6 +271,7 @@ function RequestDetailPage() {
     }
 
     setActionError(null);
+    setIsMutating(true);
 
     try {
       // Posted before the status change - see handleCancelConfirm for why.
@@ -279,6 +296,7 @@ function RequestDetailPage() {
       console.error("Failed to close request:", error);
     } finally {
       setCloseConfirmOpen(false);
+      setIsMutating(false);
     }
   }
 
@@ -398,24 +416,24 @@ function RequestDetailPage() {
 
             <div className="mt-2 flex flex-wrap gap-2">
               {canSetPending && (
-                <Button variant="info" onClick={() => handleStatusChange("pending")}>
+                <Button variant="info" onClick={() => handleStatusChange("pending")} disabled={isMutating}>
                   Set Pending
                 </Button>
               )}
 
               {canReopen && (
-                <Button variant="info" onClick={() => handleStatusChange("open")}>
+                <Button variant="info" onClick={() => handleStatusChange("open")} disabled={isMutating}>
                   Reopen
                 </Button>
               )}
 
               {canAssignToMe && (
-                <Button variant="info" onClick={handleAssignToMe}>
+                <Button variant="info" onClick={handleAssignToMe} disabled={isMutating}>
                   Assign to me
                 </Button>
               )}
-              
-                {canReassign && (
+
+              {canReassign && (
                 <div className="flex items-center gap-2">
                   <label htmlFor="reassign-select" className="sr-only">
                     Reassign to
@@ -424,7 +442,8 @@ function RequestDetailPage() {
                     id="reassign-select"
                     value={reassignTo}
                     onChange={(e) => setReassignTo(e.target.value)}
-                    className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                    disabled={isMutating}
+                    className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:ring-2 focus:ring-[var(--color-info)] disabled:opacity-50"
                   >
                     <option value="">Reassign to...</option>
                     {staffUsers.map((staffUser) => (
@@ -437,7 +456,7 @@ function RequestDetailPage() {
                   <Button
                     variant="info"
                     onClick={handleReassign}
-                    disabled={!reassignTo || reassignTo === request.assigneeId}
+                    disabled={isMutating || !reassignTo || reassignTo === request.assigneeId}
                   >
                     Reassign
                   </Button>
@@ -446,13 +465,13 @@ function RequestDetailPage() {
 
 
               {canClose && (
-                <Button variant="danger" onClick={() => setCloseConfirmOpen(true)}>
+                <Button variant="danger" onClick={() => setCloseConfirmOpen(true)} disabled={isMutating}>
                   Close request
                 </Button>
               )}
 
               {canCancel && (
-                <Button variant="danger" onClick={() => setCancelConfirmOpen(true)}>
+                <Button variant="danger" onClick={() => setCancelConfirmOpen(true)} disabled={isMutating}>
                   Cancel request
                 </Button>
               )}
@@ -513,9 +532,10 @@ function RequestDetailPage() {
         open={isCancelConfirmOpen}
         title="Cancel this request?"
         description="This can't be undone. The requester and any assignee will see it as cancelled."
-        confirmLabel="Cancel request"
+        confirmLabel={isMutating ? "Cancelling..." : "Cancel request"}
         cancelLabel="Keep request"
         variant="danger"
+        confirming={isMutating}
         onConfirm={handleCancelConfirm}
         onCancel={() => setCancelConfirmOpen(false)}
       />
@@ -524,9 +544,10 @@ function RequestDetailPage() {
         open={isCloseConfirmOpen}
         title="Close this request?"
         description="This can't be undone. The requester and any assignee will see it as closed."
-        confirmLabel="Close request"
+        confirmLabel={isMutating ? "Closing..." : "Close request"}
         cancelLabel="Keep request"
         variant="danger"
+        confirming={isMutating}
         onConfirm={handleCloseConfirm}
         onCancel={() => setCloseConfirmOpen(false)}
       />

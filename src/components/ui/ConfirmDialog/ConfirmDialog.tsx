@@ -8,6 +8,12 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "primary" | "danger";
+  // True while the confirmed action is actually in flight - disables both
+  // buttons and the backdrop-dismiss, so a click mid-request can't fire a
+  // second mutation or close the dialog while the first one is still
+  // pending (which would strand the user with no visible confirmation of
+  // whether the action ever actually completed).
+  confirming?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,6 +25,7 @@ function ConfirmDialog({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   variant = "primary",
+  confirming = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -29,7 +36,7 @@ function ConfirmDialog({
   return (
     <div
       className="motion-fade fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onCancel}
+      onClick={confirming ? undefined : onCancel}
     >
       <div
         role="alertdialog"
@@ -52,13 +59,14 @@ function ConfirmDialog({
         )}
 
         <div className="mt-6 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel} disabled={confirming}>
             {cancelLabel}
           </Button>
 
           <Button
             variant={variant === "danger" ? "danger" : "primary"}
             onClick={onConfirm}
+            disabled={confirming}
           >
             {confirmLabel}
           </Button>
