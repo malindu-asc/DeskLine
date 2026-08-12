@@ -1,0 +1,61 @@
+import type { ReactNode } from "react";
+import type { Request, User } from "../../../shared/types";
+import RequestCard from "./RequestCard";
+
+interface RequestListProps {
+  requests: Request[];
+  users: User[];
+  totalCount: number;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  emptyAction?: ReactNode;
+}
+
+function RequestList({
+  requests,
+  users,
+  totalCount,
+  emptyTitle = "No requests yet",
+  emptyDescription = "Requests will show up here once they exist.",
+  emptyAction,
+}: RequestListProps) {
+  if (totalCount === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-[var(--color-border)] p-10 text-center">
+        <h3 className="text-lg font-semibold">{emptyTitle}</h3>
+
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          {emptyDescription}
+        </p>
+
+        {emptyAction && <div className="mt-4">{emptyAction}</div>}
+      </div>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-[var(--color-border)] p-10 text-center">
+        <h3 className="text-lg font-semibold">No matches</h3>
+
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          Try changing your search or filters.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {requests.map((request) => (
+        <RequestCard
+          key={request.id}
+          request={request}
+          users={users}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default RequestList;
