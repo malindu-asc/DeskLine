@@ -1,4 +1,4 @@
-import type { User } from "../shared/types/user";
+import type { User } from "../shared/types";
 
 export const users: User[] = [
   {

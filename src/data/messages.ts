@@ -23,23 +23,3 @@ export const messages: Message[] = [
     createdAt: "2026-07-26T10:00:00Z",
   },
 ];
-
-export interface CreateMessageInput {
-  requestId: string;
-  authorId: string;
-  body: string;
-}
-
-export function createMessage(input: CreateMessageInput): Message {
-  const message: Message = {
-    id: crypto.randomUUID(),
-    requestId: input.requestId,
-    authorId: input.authorId,
-    body: input.body,
-    createdAt: new Date().toISOString(),
-  };
-
-  messages.push(message);
-
-  return message;
-}
