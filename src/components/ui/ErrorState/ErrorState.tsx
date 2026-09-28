@@ -10,9 +10,9 @@ function ErrorState({ message = "Something went wrong.", onRetry }: ErrorStatePr
   return (
     <div
       role="alert"
-      className="flex flex-col items-center gap-3 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 p-10 text-center"
+      className="flex flex-col items-center gap-3 rounded-xl border border-red-500/20 bg-red-50 p-10 text-center"
     >
-      <AlertTriangle className="size-6 text-[var(--color-danger)]" aria-hidden="true" />
+      <AlertTriangle className="size-6 text-red-700" aria-hidden="true" />
       <p className="text-sm text-[var(--color-text-secondary)]">{message}</p>
       {onRetry && (
         <Button variant="secondary" onClick={onRetry}>
