@@ -31,3 +31,9 @@ coverage
 
 # Test automation docs are deliverables, not scratch notes
 !docs/**/*.md
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
