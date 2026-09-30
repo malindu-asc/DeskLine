@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { RequestListPage } from "./RequestListPage";
 
-/** pages/MyRequestsPage.tsx - the requester's home. */
+/** The requester's home. */
 export class MyRequestsPage extends RequestListPage {
   readonly newRequestLink: Locator;
 

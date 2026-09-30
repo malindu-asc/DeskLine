@@ -3,11 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { AppHeader } from "../components/AppHeader";
 import { RequestFilters } from "../components/RequestFilters";
 
-/**
- * Behaviour shared by the two list screens (My Requests and the Queue). Both
- * render the same RequestFilters bar and the same RequestList of RequestCards;
- * only the heading, the empty state and the assignee filter differ.
- */
+/** Shared by the two list screens - same filter bar, same cards. */
 export class RequestListPage {
   protected readonly page: Page;
   readonly header: AppHeader;
@@ -23,20 +19,14 @@ export class RequestListPage {
     this.noMatchesMessage = page.getByRole("heading", { name: "No matches" });
   }
 
-  /**
-   * A single request row, matched by its title.
-   *
-   * RequestCard wraps a Card in a <Link> and gives the title an <h3>, so
-   * anchoring on that heading is precise without needing a data-testid. Counting
-   * bare links would also pick up the header's nav links.
-   */
+  /** Anchored on the card's h3 - counting bare links would also match nav links. */
   card(title: string): Locator {
     return this.page
       .locator("a")
       .filter({ has: this.page.getByRole("heading", { level: 3, name: title, exact: true }) });
   }
 
-  /** Narrows the list to one request. Required - the seed data is 503 rows deep. */
+  /** Required - the seed data is 503 rows deep. */
   async findByTitle(title: string): Promise<void> {
     await this.filters.searchFor(title);
   }

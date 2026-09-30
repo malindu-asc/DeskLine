@@ -1,7 +1,6 @@
-// The three seed users from src/data/users.ts, plus the token shape the mock
-// API expects. Duplicated rather than imported: e2e/ is a separate TypeScript
-// project from src/, and a test fixture that silently follows a production
-// refactor is a fixture that stops catching regressions.
+// The three seed users, duplicated from src/data/users.ts rather than imported:
+// e2e/ is a separate TypeScript project, and a fixture that silently follows a
+// production refactor stops catching regressions.
 
 export type Role = "requester" | "technician" | "admin";
 
@@ -12,7 +11,7 @@ export interface SeedUser {
   role: Role;
 }
 
-/** Shared demo password for all seed users - see src/mocks/credentials.ts. */
+/** Shared by all seed users. */
 export const DEMO_PASSWORD = "password123";
 
 export const USERS: Record<Role, SeedUser> = {
@@ -36,15 +35,12 @@ export const USERS: Record<Role, SeedUser> = {
   },
 };
 
-/**
- * Mirrors the token format the MSW handlers parse in getActingUser():
- * "demo-token-<userId>", from which the handler looks the role up in db.users.
- */
+/** The token format the mock API's getActingUser() parses. */
 export function tokenFor(user: SeedUser): string {
   return `demo-token-${user.id}`;
 }
 
-/** Where each role is sent after login - see features/auth/utils/getHomeRoute.ts. */
+/** Where each role lands after login. */
 export function homeRouteFor(role: Role): string {
   return role === "requester" ? "/my-requests" : "/queue";
 }

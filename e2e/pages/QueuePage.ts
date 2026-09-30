@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { RequestListPage } from "./RequestListPage";
 
-/** pages/QueuePage.tsx - the staff (technician and admin) home. */
+/** The staff home - technicians and admins. */
 export class QueuePage extends RequestListPage {
   constructor(page: Page) {
     super(page, "Queue");
@@ -12,7 +12,6 @@ export class QueuePage extends RequestListPage {
     await this.page.goto("/queue");
   }
 
-  /** Queue-only filter, persisted to the URL as ?assignee=. */
   async filterByAssignee(value: "all" | "unassigned" | "me"): Promise<void> {
     await this.filters.assignee.selectOption(value);
   }

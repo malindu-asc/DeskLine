@@ -9,7 +9,7 @@ export interface NewRequestInput {
   priority: "low" | "medium" | "high";
 }
 
-/** pages/NewRequestPage.tsx - requester-only, reached from My Requests. */
+/** The raise-a-ticket form. Requester only. */
 export class NewRequestPage {
   private readonly page: Page;
   readonly header: AppHeader;
@@ -31,6 +31,7 @@ export class NewRequestPage {
     this.description = page.locator("#description");
     this.category = page.locator("#category");
     this.priority = page.locator("#priority");
+    // The label changes to "Creating..." while the request is in flight.
     this.createButton = page.getByRole("button", { name: /Create request|Creating/ });
     this.errorAlert = page.getByRole("alert");
   }
@@ -50,7 +51,7 @@ export class NewRequestPage {
     await this.createButton.click();
   }
 
-  /** See LoginPage.touch - the same `touched` gate applies to every field here. */
+  /** Errors only render once a field is touched, so blur is required. */
   async touch(field: "title" | "description" | "category" | "priority"): Promise<void> {
     await this[field].focus();
     await this[field].blur();

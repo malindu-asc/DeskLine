@@ -1,13 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 
 /**
- * The modal from components/ui/ConfirmDialog.tsx, used to gate the destructive
- * actions (close, cancel).
+ * The confirm modal for close and cancel.
  *
- * Buttons are resolved INSIDE the dialog on purpose. The confirm button carries
- * the same label as the action button that opened it ("Close request",
- * "Cancel request"), so a page-level lookup matches two elements once the dialog
- * is open and fails strict mode.
+ * Buttons are resolved inside the dialog: the confirm button shares its label
+ * with the action button that opened it, so a page-level lookup matches two.
  */
 export class ConfirmDialog {
   readonly root: Locator;
@@ -24,12 +21,10 @@ export class ConfirmDialog {
     return this.root.getByRole("button", { name: label });
   }
 
-  /** Goes through with the action. */
   async confirm(label: string): Promise<void> {
     await this.button(label).click();
   }
 
-  /** Backs out. The default label is shared by both destructive dialogs. */
   async dismiss(label = "Keep request"): Promise<void> {
     await this.button(label).click();
   }

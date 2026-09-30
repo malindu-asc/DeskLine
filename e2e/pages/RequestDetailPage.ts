@@ -4,16 +4,11 @@ import { AppHeader } from "../components/AppHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 
 /**
- * pages/RequestDetailPage.tsx - the richest screen in the app, and the one whose
- * visible controls depend on the caller's role, ownership and the request's
- * current status.
+ * A single request. Which controls appear depends on role, ownership and status.
  *
- * Several locators below are anchored to a heading and then walked to its
- * sibling. That is deliberate rather than clever: the page has no test hooks,
- * and the labels alone are ambiguous. "Close request" is both an action button
- * and the confirm button of the dialog it opens; the status badge would collide
- * with free-text comments. Anchoring on the section heading makes each one
- * unambiguous without touching the application source.
+ * Several locators walk from a heading to its sibling. The page has no test
+ * hooks and the labels alone are ambiguous - "Close request" is both an action
+ * button and the confirm button of the dialog it opens.
  */
 export class RequestDetailPage {
   private readonly page: Page;
@@ -51,11 +46,10 @@ export class RequestDetailPage {
     this.header = new AppHeader(page);
     this.confirmDialog = new ConfirmDialog(page);
 
-    // The request title is the page's only <h2>; Actions and Activity are <h3>.
+    // The title is the only h2; Actions and Activity are h3.
     this.title = page.getByRole("heading", { level: 2 });
 
-    // The three Badges sit in the div immediately after the title, in a fixed
-    // order: status, priority, category.
+    // Badges sit in the div after the title, in a fixed order.
     const badges = this.title.locator("xpath=following-sibling::div[1]").locator("span");
     this.statusBadge = badges.nth(0);
     this.priorityBadge = badges.nth(1);
@@ -84,7 +78,7 @@ export class RequestDetailPage {
     this.forbiddenHeading = page.getByRole("heading", { name: "Not authorized" });
   }
 
-  /** Walks from a <dt> label to the <dd> holding its value. */
+  /** <dt> label to its <dd> value. */
   private static definitionFor(page: Page, label: string): Locator {
     return page
       .locator("dt")
@@ -93,7 +87,7 @@ export class RequestDetailPage {
       .first();
   }
 
-  /** Walks from a section heading to the panel that follows it. */
+  /** Section heading to the panel that follows it. */
   private static sectionAfter(page: Page, heading: string): Locator {
     return page
       .locator("h3")
@@ -128,7 +122,6 @@ export class RequestDetailPage {
     await this.sendButton.click();
   }
 
-  /** Opens the close dialog without going through with it. */
   async openCloseDialog(): Promise<void> {
     await this.closeRequestButton.click();
   }
@@ -138,7 +131,6 @@ export class RequestDetailPage {
     await this.confirmDialog.confirm("Close request");
   }
 
-  /** Opens the cancel dialog without going through with it. */
   async openCancelDialog(): Promise<void> {
     await this.cancelRequestButton.click();
   }
@@ -148,7 +140,6 @@ export class RequestDetailPage {
     await this.confirmDialog.confirm("Cancel request");
   }
 
-  /** A single message in the Activity thread, matched by its body text. */
   message(body: string): Locator {
     return this.activityPanel.getByText(body, { exact: true });
   }

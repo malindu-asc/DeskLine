@@ -1,20 +1,12 @@
-// The only three deterministic requests in the system.
-//
-// src/mocks/db.ts seeds 503 requests: these three hand-written fixtures plus
-// 500 from generateRequests(), which randomises status, priority, category and
-// assignee with Math.random() and generates ids with crypto.randomUUID(). The
-// generated 500 therefore differ on every page load and no assertion may
-// depend on any of them.
+// The only deterministic requests in the system. The other 500 are generated
+// with Math.random() and crypto.randomUUID() on every page load, so nothing may
+// depend on them.
 
 export const FIXTURE_REQUESTS = {
   /**
-   * The preferred anchor for deterministic tests.
-   *
-   * Also the only fixture whose title is unique as a substring: filterRequests
-   * matches on title.includes(search), and the generator's title pool contains
-   * the literal strings "VPN disconnects frequently" and "Office air
-   * conditioner not working" (suffixed "#N"), so searching either matches
-   * dozens of generated rows. The pool's closest hardware entry is "Laptop
+   * The preferred anchor. Also the only fixture whose title is unique as a
+   * substring - the generator's pool contains "VPN disconnects frequently" and
+   * "Office air conditioner not working", but its hardware entry is "Laptop
    * won't turn on", not "Laptop won't boot".
    */
   r1: {
@@ -46,5 +38,5 @@ export const FIXTURE_REQUESTS = {
   },
 } as const;
 
-/** Rendered by getUserName() when a request has no assignee. */
+/** Shown when a request has no assignee. */
 export const UNASSIGNED_LABEL = "Unassigned";

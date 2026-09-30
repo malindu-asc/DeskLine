@@ -1,18 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 
-/**
- * The filter bar from features/requests/components/RequestFilters.tsx, shared by
- * My Requests and the Queue.
- *
- * Every control already carries an id in the application source, so no test
- * hooks were added to make this addressable.
- */
+/** The filter bar shared by My Requests and the Queue. */
 export class RequestFilters {
   readonly search: Locator;
   readonly status: Locator;
   readonly priority: Locator;
   readonly category: Locator;
-  /** Queue only - My Requests never passes onAssigneeChange, so it is not rendered there. */
+  /** Queue only - not rendered on My Requests. */
   readonly assignee: Locator;
   readonly clearButton: Locator;
 

@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { DEMO_PASSWORD, USERS, type Role } from "../fixtures/users";
 
-/** pages/LoginPage.tsx - the only unauthenticated screen. */
+/** The only unauthenticated screen. */
 export class LoginPage {
   private readonly page: Page;
   readonly heading: Locator;
@@ -26,7 +26,6 @@ export class LoginPage {
     await this.page.goto("/login");
   }
 
-  /** Signs in as one of the three seed users. */
   async signInAs(role: Role): Promise<void> {
     await this.signIn(USERS[role].email, DEMO_PASSWORD);
   }
@@ -37,11 +36,7 @@ export class LoginPage {
     await this.signInButton.click();
   }
 
-  /**
-   * Inline validation renders only once a field is `touched`, so a field has to
-   * be focused and blurred before its error appears - typing then clearing will
-   * not surface it.
-   */
+  /** Errors only render once a field is touched, so blur is required. */
   async touch(field: "email" | "password"): Promise<void> {
     const locator = field === "email" ? this.email : this.password;
     await locator.focus();

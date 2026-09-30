@@ -7,13 +7,8 @@ import { QueuePage } from "../pages/QueuePage";
 import { RequestDetailPage } from "../pages/RequestDetailPage";
 
 /**
- * Page objects delivered through Playwright's own fixture mechanism, so specs
- * declare what they need in the test signature instead of constructing objects
- * by hand.
- *
- * All of them wrap the SAME page instance. That is what makes a cross-role flow
- * readable: signing out and back in as another role changes which page object is
- * meaningful, not which browser context the test is driving.
+ * Page objects delivered as Playwright fixtures, so specs declare what they need
+ * instead of constructing objects by hand. All wrap the same page instance.
  */
 interface Pages {
   loginPage: LoginPage;
