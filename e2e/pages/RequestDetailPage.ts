@@ -126,18 +126,8 @@ export class RequestDetailPage {
     await this.closeRequestButton.click();
   }
 
-  async closeRequest(): Promise<void> {
-    await this.openCloseDialog();
-    await this.confirmDialog.confirm("Close request");
-  }
-
   async openCancelDialog(): Promise<void> {
     await this.cancelRequestButton.click();
-  }
-
-  async cancelRequest(): Promise<void> {
-    await this.openCancelDialog();
-    await this.confirmDialog.confirm("Cancel request");
   }
 
   message(body: string): Locator {

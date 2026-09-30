@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/pages";
 import { FIXTURE_REQUESTS } from "../fixtures/requests";
+import { COMMENTS } from "../fixtures/test-data";
 import { USERS } from "../fixtures/users";
 
 /**
@@ -21,8 +22,6 @@ test.describe("Flow 3 - Requester cancellation", () => {
     myRequestsPage,
     requestDetailPage,
   }) => {
-    const requesterComment = "Still happening after a full power cycle this morning.";
-
     await test.step("Requester signs in", async () => {
       await loginPage.goto();
       await loginPage.signInAs("requester");
@@ -44,9 +43,9 @@ test.describe("Flow 3 - Requester cancellation", () => {
     });
 
     await test.step("Requester comments on the open ticket", async () => {
-      await requestDetailPage.postComment(requesterComment);
+      await requestDetailPage.postComment(COMMENTS.requester);
 
-      await expect(requestDetailPage.message(requesterComment)).toBeVisible();
+      await expect(requestDetailPage.message(COMMENTS.requester)).toBeVisible();
       await expect(requestDetailPage.commentBox).toHaveValue("");
     });
 
@@ -81,7 +80,7 @@ test.describe("Flow 3 - Requester cancellation", () => {
       await expect(requestDetailPage.message("Cancelled by requester")).toBeVisible();
 
       // The earlier comment survived the transition.
-      await expect(requestDetailPage.message(requesterComment)).toBeVisible();
+      await expect(requestDetailPage.message(COMMENTS.requester)).toBeVisible();
     });
   });
 });

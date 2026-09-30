@@ -19,3 +19,9 @@ export function aNewRequest(overrides: Partial<NewRequestInput> = {}): NewReques
     ...overrides,
   };
 }
+
+/** Comment bodies used by the flows. */
+export const COMMENTS = {
+  technician: "Picked this up - investigating the boot failure now.",
+  requester: "Still happening after a full power cycle this morning.",
+};

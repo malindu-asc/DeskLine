@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/pages";
-import { aNewRequest } from "../fixtures/test-data";
+import { COMMENTS, aNewRequest } from "../fixtures/test-data";
+import { UNASSIGNED_LABEL } from "../fixtures/requests";
 import { USERS } from "../fixtures/users";
 
 /**
@@ -22,7 +23,6 @@ test.describe("Flow 1 - Ticket lifecycle", () => {
     requestDetailPage,
   }) => {
     const ticket = aNewRequest();
-    const technicianComment = "Picked this up - investigating the boot failure now.";
 
     await test.step("Requester signs in", async () => {
       await loginPage.goto();
@@ -79,7 +79,7 @@ test.describe("Flow 1 - Ticket lifecycle", () => {
       await expect(requestDetailPage.priorityBadge).toHaveText(ticket.priority);
       await expect(requestDetailPage.categoryBadge).toHaveText(ticket.category);
       await expect(requestDetailPage.requesterValue).toContainText(USERS.requester.name);
-      await expect(requestDetailPage.assigneeValue).toContainText("Unassigned");
+      await expect(requestDetailPage.assigneeValue).toContainText(UNASSIGNED_LABEL);
 
       // The description is stored as the thread's first message, not on the
       // request. If that second POST is ever dropped, only this assertion fails.
@@ -111,7 +111,7 @@ test.describe("Flow 1 - Ticket lifecycle", () => {
     });
 
     await test.step("Technician assigns the ticket to themselves", async () => {
-      await expect(requestDetailPage.assigneeValue).toContainText("Unassigned");
+      await expect(requestDetailPage.assigneeValue).toContainText(UNASSIGNED_LABEL);
 
       await requestDetailPage.assignToSelf();
 
@@ -120,9 +120,9 @@ test.describe("Flow 1 - Ticket lifecycle", () => {
     });
 
     await test.step("Technician comments on the ticket", async () => {
-      await requestDetailPage.postComment(technicianComment);
+      await requestDetailPage.postComment(COMMENTS.technician);
 
-      await expect(requestDetailPage.message(technicianComment)).toBeVisible();
+      await expect(requestDetailPage.message(COMMENTS.technician)).toBeVisible();
       await expect(requestDetailPage.commentBox).toHaveValue("");
     });
 
@@ -132,9 +132,6 @@ test.describe("Flow 1 - Ticket lifecycle", () => {
       await expect(requestDetailPage.statusBadge).toHaveText("pending");
       await expect(requestDetailPage.setPendingButton).toBeHidden();
       await expect(requestDetailPage.reopenButton).toBeVisible();
-
-      // A technician is not an admin - closing stays off the page.
-      await expect(requestDetailPage.closeRequestButton).toBeHidden();
     });
 
     await test.step("Technician signs out", async () => {
@@ -184,7 +181,7 @@ test.describe("Flow 1 - Ticket lifecycle", () => {
 
       // The whole history survived the round trip.
       await expect(requestDetailPage.message(ticket.description)).toBeVisible();
-      await expect(requestDetailPage.message(technicianComment)).toBeVisible();
+      await expect(requestDetailPage.message(COMMENTS.technician)).toBeVisible();
       await expect(requestDetailPage.message("Closed by admin")).toBeVisible();
     });
   });

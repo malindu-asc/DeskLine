@@ -34,13 +34,3 @@ export const USERS: Record<Role, SeedUser> = {
     role: "admin",
   },
 };
-
-/** The token format the mock API's getActingUser() parses. */
-export function tokenFor(user: SeedUser): string {
-  return `demo-token-${user.id}`;
-}
-
-/** Where each role lands after login. */
-export function homeRouteFor(role: Role): string {
-  return role === "requester" ? "/my-requests" : "/queue";
-}
